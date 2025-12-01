@@ -1,0 +1,162 @@
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+  <div class="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl relative overflow-hidden">
+    <!-- Éléments décoratifs -->
+    <div class="absolute -top-12 -right-12 w-24 h-24 rounded-full bg-blue-100 opacity-50"></div>
+    <div class="absolute -bottom-10 -left-10 w-20 h-20 rounded-full bg-indigo-100 opacity-50"></div>
+    
+    <div class="relative z-10">
+      <div class="text-center">
+        <!-- Icône de vérification -->
+        <div class="flex justify-center mb-4">
+          <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+        </div>
+        
+        <h2 class="text-3xl font-bold text-gray-900">
+          Vérification de sécurité
+        </h2>
+        <p class="mt-2 text-gray-600">
+          Entrez le code de vérification envoyé à votre adresse email
+        </p>
+      </div>
+
+      <!-- Message d'erreur global -->
+      <div *ngIf="errorMessage" class="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-red-500 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-red-700">
+              {{ errorMessage }}
+              <span *ngIf="!isTokenValid" class="block mt-1">
+                <button (click)="resendCode()" class="font-medium text-red-700 hover:text-red-600 underline mr-2">
+                  Renvoyer le code
+                </button>
+                ou
+                <button (click)="router.navigate(['/login'])" class="font-medium text-red-700 hover:text-red-600 underline ml-2">
+                  Se reconnecter
+                </button>
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Message de succès -->
+      <div *ngIf="successMessage" class="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-green-500 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-green-700">
+              {{ successMessage }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <form class="mt-6 space-y-6" [formGroup]="codeForm" (ngSubmit)="onSubmit()">
+        <div class="space-y-4">
+          <div>
+            <label for="code" class="block text-sm font-medium text-gray-700 mb-2">
+              Code de vérification
+            </label>
+            <div class="relative">
+              <span class="absolute left-3 top-3 text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+              </span>
+              <input
+                id="code"
+                name="code"
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                formControlName="code"
+                (input)="onCodeInput($event)"
+                autocomplete="one-time-code"
+                required
+                [class.border-red-500]="showCodeError"
+                [class.border-gray-300]="!showCodeError"
+                class="w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                placeholder="Ex: 123456"
+                maxlength="6"
+              />
+            </div>
+            <div *ngIf="showCodeError" class="mt-2 text-sm text-red-600">
+              <div *ngIf="codeControl?.errors?.['required']">
+                Le code est requis
+              </div>
+              <div *ngIf="codeControl?.errors?.['pattern'] || codeControl?.errors?.['minlength'] || codeControl?.errors?.['maxlength']">
+                Le code doit comporter exactement 6 chiffres
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <button
+            type="submit"
+            [disabled]="codeForm.invalid || isLoading || !isTokenValid"
+            class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 relative"
+          >
+            <span *ngIf="!isLoading" class="flex items-center">
+              <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+              </svg>
+              Vérifier le code
+            </span>
+            <span *ngIf="isLoading" class="flex items-center">
+              <svg class="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Vérification en cours...
+            </span>
+          </button>
+        </div>
+      </form>
+
+      <div class="text-center text-sm text-gray-500 pt-4">
+        <p class="mb-2">Vous n'avez pas reçu de code ?</p>
+        <button 
+          (click)="resendCode()" 
+          [disabled]="isLoading" 
+          class="inline-flex items-center font-medium text-blue-600 hover:text-blue-500 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Renvoyer le code
+        </button>
+      </div>
+      
+      <!-- Information supplémentaire -->
+      <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-blue-800">Sécurité renforcée</h3>
+            <div class="mt-1 text-sm text-blue-700">
+              <p>La vérification à deux facteurs protège votre compte contre les accès non autorisés.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,10 @@
+/* loader.component.css */
+.loader-test {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: red; /* Couleur visible */
+  width: 100px;
+  height: 100px;
+}

@@ -1,0 +1,564 @@
+<div class="min-h-screen bg-gray-50 py-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- En-tête -->
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-8">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Gestion des Rôles</h1>
+          <p class="text-gray-600 mt-2">Gérez les rôles et leurs permissions dans le système</p>
+        </div>
+        <button 
+          (click)="openCreateModal()"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
+          <span>Nouveau Rôle</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Barre de recherche et statistiques -->
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+      <div class="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
+        <div class="flex-1 max-w-md">
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+            </div>
+            <input 
+              type="text" 
+              [(ngModel)]="searchTerm"
+              placeholder="Rechercher un rôle..." 
+              class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          </div>
+        </div>
+        
+        <!-- Sélecteur d'éléments par page -->
+        <div class="flex items-center space-x-4">
+          <div class="flex items-center">
+            <label for="itemsPerPage" class="text-sm text-gray-700 mr-2">Rôles par page:</label>
+            <select 
+              id="itemsPerPage"
+              [(ngModel)]="itemsPerPage"
+              (change)="changePageSize(itemsPerPage)"
+              class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option *ngFor="let option of pageSizeOptions" [value]="option">{{ option }}</option>
+            </select>
+          </div>
+          
+          <div class="text-sm text-gray-600">
+            {{ filteredRoles.length }} rôle(s) trouvé(s)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Indicateur de chargement -->
+    <div *ngIf="isLoading" class="flex justify-center items-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>
+
+    <!-- Liste des rôles -->
+    <div *ngIf="!isLoading" class="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Permissions</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Toutes permissions</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr *ngFor="let role of paginatedRoles" class="hover:bg-gray-50 transition-colors duration-150">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center">
+                  <div class="flex-shrink-0 h-10 w-10">
+                    <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                      <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="ml-4">
+                    <div class="text-sm font-medium text-gray-900">{{ role.name }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4">
+                <div class="text-sm text-gray-900">{{ role.description || 'Aucune description' }}</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <button 
+                  (click)="openPermissionsModal(role)"
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 hover:bg-green-200 transition-colors duration-200 cursor-pointer">
+                  {{ getPermissionCountDisplay(role) }}
+                  <svg class="ml-1 w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </button>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <label class="flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    [checked]="role.hasAllPermissions"
+                    (change)="toggleAllPermissions(role)"
+                    class="sr-only">
+                  <div class="relative">
+                    <div [class]="role.hasAllPermissions ? 'bg-blue-600' : 'bg-gray-300'" 
+                         class="w-10 h-6 rounded-full shadow-inner transition-colors duration-200"></div>
+                    <div [class]="role.hasAllPermissions ? 'translate-x-4' : 'translate-x-0'" 
+                         class="absolute inset-y-0 left-0 w-6 h-6 bg-white rounded-full shadow transform transition-transform duration-200"></div>
+                  </div>
+                </label>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <div class="flex items-center space-x-3">
+                  <button 
+                    (click)="openEditModal(role)"
+                    class="text-blue-600 hover:text-blue-900 transition-colors duration-200"
+                    title="Modifier le rôle">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                  </button>
+                  <button 
+                    (click)="openDeleteModal(role)"
+                    class="text-red-600 hover:text-red-900 transition-colors duration-200"
+                    title="Supprimer le rôle">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination améliorée -->
+      <div *ngIf="filteredRoles.length > 0" class="bg-white px-6 py-4 border-t border-gray-200">
+        <div class="flex items-center justify-between">
+          <!-- Informations sur les éléments affichés -->
+          <div class="text-sm text-gray-700">
+            Affichage de <span class="font-medium">{{ (currentPage - 1) * itemsPerPage + 1 }}</span>
+            à <span class="font-medium">{{ Math.min(currentPage * itemsPerPage, filteredRoles.length) }}</span>
+            sur <span class="font-medium">{{ filteredRoles.length }}</span> résultats
+          </div>
+
+          <!-- Navigation de pagination -->
+          <nav class="flex items-center space-x-2">
+            <!-- Bouton précédent -->
+            <button 
+              (click)="previousPage()"
+              [disabled]="currentPage === 1"
+              class="px-3 py-1 rounded-md border border-gray-300 text-sm font-medium"
+              [ngClass]="{
+                'text-gray-400 cursor-not-allowed': currentPage === 1,
+                'text-gray-700 hover:bg-gray-50': currentPage > 1
+              }"
+            >
+              Précédent
+            </button>
+
+            <!-- Numéros de page -->
+            <div class="hidden sm:flex space-x-1">
+              <!-- Première page -->
+              <button 
+                *ngIf="getPageNumbers()[0] > 1"
+                (click)="changePage(1)"
+                class="px-3 py-1 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                1
+              </button>
+              
+              <!-- Points de suspension si nécessaire -->
+              <span 
+                *ngIf="getPageNumbers()[0] > 2"
+                class="px-3 py-1 text-gray-500"
+              >
+                ...
+              </span>
+
+              <!-- Pages numérotées -->
+              <button 
+                *ngFor="let page of getPageNumbers()"
+                (click)="changePage(page)"
+                class="px-3 py-1 rounded-md border text-sm font-medium"
+                [ngClass]="{
+                  'border-blue-500 bg-blue-50 text-blue-600': page === currentPage,
+                  'border-gray-300 text-gray-700 hover:bg-gray-50': page !== currentPage
+                }"
+              >
+                {{ page }}
+              </button>
+
+              <!-- Points de suspension si nécessaire -->
+              <span 
+                *ngIf="getPageNumbers()[getPageNumbers().length - 1] < totalPages - 1"
+                class="px-3 py-1 text-gray-500"
+              >
+                ...
+              </span>
+
+              <!-- Dernière page -->
+              <button 
+                *ngIf="getPageNumbers()[getPageNumbers().length - 1] < totalPages"
+                (click)="changePage(totalPages)"
+                class="px-3 py-1 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                {{ totalPages }}
+              </button>
+            </div>
+
+            <!-- Bouton suivant -->
+            <button 
+              (click)="nextPage()"
+              [disabled]="currentPage === totalPages"
+              class="px-3 py-1 rounded-md border border-gray-300 text-sm font-medium"
+              [ngClass]="{
+                'text-gray-400 cursor-not-allowed': currentPage === totalPages,
+                'text-gray-700 hover:bg-gray-50': currentPage < totalPages
+              }"
+            >
+              Suivant
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Message si aucun résultat -->
+      <div *ngIf="filteredRoles.length === 0 && !isLoading" class="text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">Aucun rôle trouvé</h3>
+        <p class="mt-1 text-sm text-gray-500">
+          {{ searchTerm ? 'Aucun résultat pour votre recherche.' : 'Commencez par créer votre premier rôle.' }}
+        </p>
+        <div class="mt-6">
+          <button 
+            (click)="openCreateModal()"
+            class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Créer un rôle
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal des permissions -->
+<div *ngIf="isPermissionsModalOpen" class="fixed inset-0 backdrop-blur-sm overflow-y-auto h-full w-full z-50">
+  <div class="relative top-10 mx-auto p-5 border w-4/5 max-w-4xl shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h3 class="text-xl font-semibold text-gray-900">Permissions du rôle</h3>
+          <p class="text-gray-600 mt-1">{{ selectedRoleForPermissions?.name }}</p>
+        </div>
+        <button (click)="closePermissionsModal()" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      
+      <!-- Toggle pour toutes les permissions -->
+      <div class="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <h4 class="text-sm font-medium text-gray-900">Gestion des permissions</h4>
+            <p class="text-xs text-gray-600 mt-1">
+              Activez ce toggle pour donner toutes les permissions ou gérez-les individuellement
+            </p>
+          </div>
+          <label class="flex items-center cursor-pointer">
+            <input 
+              type="checkbox" 
+              [checked]="selectedRoleForPermissions?.hasAllPermissions"
+              (change)="toggleAllPermissionsInModal()"
+              class="sr-only">
+            <div class="relative">
+              <div [class]="selectedRoleForPermissions?.hasAllPermissions ? 'bg-blue-600' : 'bg-gray-300'" 
+                   class="w-12 h-6 rounded-full shadow-inner transition-colors duration-200"></div>
+              <div [class]="selectedRoleForPermissions?.hasAllPermissions ? 'translate-x-6' : 'translate-x-0'" 
+                   class="absolute inset-y-0 left-0 w-6 h-6 bg-white rounded-full shadow transform transition-transform duration-200"></div>
+            </div>
+          </label>
+        </div>
+      </div>
+      
+      <!-- Statut des permissions -->
+      <div *ngIf="selectedRoleForPermissions?.hasAllPermissions" 
+           class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div class="flex items-center">
+          <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span class="text-blue-800 font-medium">Ce rôle a accès à toutes les permissions du système</span>
+        </div>
+      </div>
+
+      <!-- Liste des permissions individuelles -->
+      <div *ngIf="!selectedRoleForPermissions?.hasAllPermissions && !isLoadingPermissions" class="max-h-96 overflow-y-auto">
+        <div class="mb-4">
+          <h4 class="text-sm font-medium text-gray-900 mb-2">Permissions assignées</h4>
+          <div *ngIf="hasPermissions(selectedRoleForPermissions); else noAssignedPermissions">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+              <div *ngFor="let rolePermission of getPermissionsArray(selectedRoleForPermissions)" 
+                   class="bg-green-50 p-3 rounded-lg border border-green-200">
+                <div class="flex items-start justify-between">
+                  <div class="flex-1">
+                    <h5 class="font-medium text-green-900 text-sm">{{ rolePermission.permission.name }}</h5>
+                    <p *ngIf="rolePermission.permission.description" 
+                       class="text-xs text-green-700 mt-1">{{ rolePermission.permission.description }}</p>
+                    <span *ngIf="rolePermission.permission.category" 
+                          class="inline-block px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full mt-2">
+                      {{ rolePermission.permission.category }}
+                    </span>
+                  </div>
+                  <button 
+                    (click)="togglePermission(rolePermission.permission)"
+                    class="ml-2 text-red-600 hover:text-red-800 transition-colors duration-200"
+                    title="Retirer cette permission">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+                </div>
+            </div>
+          </div>
+
+          <ng-template #noAssignedPermissions>
+            <div class="text-center py-6 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+              <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+              <h3 class="mt-2 text-sm font-medium text-gray-900">Aucune permission assignée</h3>
+              <p class="mt-1 text-sm text-gray-500">Sélectionnez des permissions ci-dessous pour les assigner à ce rôle.</p>
+            </div>
+          </ng-template>
+        </div>
+
+        <!-- Toutes les permissions disponibles -->
+        <div>
+          <h4 class="text-sm font-medium text-gray-900 mb-2">Toutes les permissions disponibles</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div *ngFor="let permission of allPermissions" 
+                 [class]="isPermissionAssigned(permission.id) ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'"
+                 class="p-3 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md"
+                 (click)="togglePermission(permission)">
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <h5 [class]="isPermissionAssigned(permission.id) ? 'text-green-900' : 'text-gray-900'"
+                      class="font-medium text-sm">{{ permission.name }}</h5>
+                  <p *ngIf="permission.description" 
+                     [class]="isPermissionAssigned(permission.id) ? 'text-green-700' : 'text-gray-600'"
+                     class="text-xs mt-1">{{ permission.description }}</p>
+                  <span *ngIf="permission.category" 
+                        [class]="isPermissionAssigned(permission.id) ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'"
+                        class="inline-block px-2 py-1 text-xs font-medium rounded-full mt-2">
+                    {{ permission.category }}
+                  </span>
+                </div>
+                <div class="ml-2 flex-shrink-0">
+                  <svg *ngIf="isPermissionAssigned(permission.id)" 
+                       class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <svg *ngIf="!isPermissionAssigned(permission.id)" 
+                       class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Indicateur de chargement pour les permissions -->
+      <div *ngIf="isLoadingPermissions" class="flex justify-center items-center py-12">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+
+      <!-- Résumé en bas du modal -->
+      <div class="mt-6 pt-4 border-t border-gray-200">
+        <div class="flex items-center justify-between">
+          <div class="text-sm text-gray-600">
+            <span *ngIf="selectedRoleForPermissions?.hasAllPermissions">
+              Accès total au système
+            </span>
+            <span *ngIf="!selectedRoleForPermissions?.hasAllPermissions">
+              {{ getPermissionsArray(selectedRoleForPermissions).length }} permission(s) assignée(s)
+            </span>
+          </div>
+          <button 
+            (click)="closePermissionsModal()"
+            class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500">
+            Fermer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de création -->
+<div *ngIf="isCreateModalOpen" class="fixed inset-0 backdrop-blur-sm overflow-y-auto h-full w-full z-50">
+  <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Créer un nouveau rôle</h3>
+        <button (click)="closeCreateModal()" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      
+      <form (ngSubmit)="createRole()" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nom du rôle*</label>
+          <input 
+            type="text" 
+            [(ngModel)]="createForm.name" 
+            name="name"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Ex: Administrateur">
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea 
+            [(ngModel)]="createForm.description" 
+            name="description"
+            rows="3"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Description du rôle..."></textarea>
+        </div>
+        
+        <div class="flex items-center">
+          <input 
+            type="checkbox" 
+            [(ngModel)]="createForm.hasAllPermissions" 
+            name="hasAllPermissions"
+            id="hasAllPermissions"
+            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+          <label for="hasAllPermissions" class="ml-2 block text-sm text-gray-900">
+            Ce rôle a toutes les permissions
+          </label>
+        </div>
+        
+        <div class="flex justify-end space-x-3 pt-4">
+          <button 
+            type="button" 
+            (click)="closeCreateModal()"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500">
+            Annuler
+          </button>
+          <button 
+            type="submit"
+            [disabled]="!createForm.name || isSubmitting"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+            <span *ngIf="isSubmitting" class="flex items-center">
+              <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Création...
+            </span>
+            <span *ngIf="!isSubmitting">Créer</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de modification -->
+<div *ngIf="isEditModalOpen" class="fixed inset-0 backdrop-blur-sm overflow-y-auto h-full w-full z-50">
+  <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Modifier le rôle</h3>
+        <button (click)="closeEditModal()" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      
+      <form (ngSubmit)="updateRole()" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nom du rôle*</label>
+          <input 
+            type="text" 
+            [(ngModel)]="editForm.name" 
+            name="editName"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Ex: Administrateur">
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea 
+            [(ngModel)]="editForm.description" 
+            name="editDescription"
+            rows="3"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Description du rôle..."></textarea>
+        </div>
+        
+        <div class="flex items-center">
+          <input 
+            type="checkbox" 
+            [(ngModel)]="editForm.hasAllPermissions" 
+            name="editHasAllPermissions"
+            id="editHasAllPermissions"
+            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+          <label for="editHasAllPermissions" class="ml-2 block text-sm text-gray-900">
+            Ce rôle a toutes les permissions
+          </label>
+        </div>
+        
+        <div class="flex justify-end space-x-3 pt-4">
+          <button 
+            type="button" 
+            (click)="closeEditModal()"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500">
+            Annuler
+          </button>
+          <button 
+            type="submit"
+            [disabled]="!editForm.name || isSubmitting"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+            <span *ngIf="isSubmitting" class="flex items-center">
+              <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Modification...
+            </span>
+            <span *ngIf="!isSubmitting">Modifier</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
